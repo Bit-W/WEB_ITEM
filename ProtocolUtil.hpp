@@ -10,22 +10,27 @@
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<string.h>
-	#include<unistd.h>
-	#include<sys/types.h>
-	#include<sys/socket.h>
-	#include<sys/wait.h>
-	#include<sys/stat.h>
-	#include<sys/sendfile.h>
-	#include<fcntl.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
+#include<sys/stat.h>
+#include<sys/sendfile.h>
+#include<fcntl.h>
 
-	using namespace std;
+using namespace std;
 
 
-	#define NOT_FOUND 404
-	#define OK 200
-	#define WEB_ROOT "wwwroot"
-	#define HOME_PAGE "index.html"
-	#define HTTP_VERSION "http/1.0"
+#define NOT_FOUND 404
+#define OK 200
+#define Bad_Request 400
+#define Server_Error 500
+
+#define WEB_ROOT "wwwroot"
+#define HOME_PAGE "index.html"
+#define PAGE_404 "404.html"
+
+#define HTTP_VERSION "http/1.0"
 
 
 	unordered_map<string,string> suffix_map
@@ -66,8 +71,12 @@
 				{
 					case 200:
 						return "OK";
+                                        case 400:
+                                                return "Bad_Request";
 					case 404:
 						return "NOT_FOUND";
+                                        case 500:
+                                                return "Server_Error";
 					default:
 						return "UNKONW";
 				}
@@ -113,7 +122,15 @@
 			{
 				resource_size = rs_;
 			}
-			
+		
+                        void SetSuffix(string suffix_)
+                        {
+                          resource_suffix = suffix_;
+                        }	
+                        void SetPath(string& path_)
+                        {
+                           path = path_;
+                        }
 			string &GetParam()
 			{
 				return param;
@@ -496,7 +513,7 @@
 			       pid_t id = fork();
 			       if(id < 0)
 				{   
-					code_ = NOT_FOUND;
+					code_ = Server_Error;
 					LOG(ERROR,"create fork faild");
 					return;
 				}
@@ -551,6 +568,36 @@
 
 			 }
 
+                         //404错误处理
+                        static void Process404(Connect *&conn_, Request *&rq_,Response *&rsp_)
+                         {
+                             string path_ = WEB_ROOT;
+                             path_ += '/';
+                             path_ += PAGE_404; 
+                             struct stat st;
+                             stat(path_.c_str(),&st);
+                             rq_->SetResourceSize(st.st_size);
+                             rq_->SetPath(path_);
+                             rq_->SetSuffix(".html");      
+			    ProcessNonCgi(conn_,rq_,rsp_);
+                         }
+                        static void HandlerError(Connect *&conn_,Request *&rq_,Response *&rsp_)
+                         {     
+				int& code_ = rsp_->code;
+                                switch(code_)
+                                 {
+                                   case 400:
+                                        break;
+                                   case 404:
+                                        Process404(conn_,rq_,rsp_);
+                                        break;
+                                   case 500:
+                                        break;
+                                   case 503:
+                                        break;
+                                } 
+
+                         }
 			//处理请求
 			static void* HandlerRequest(void* arg_)  //处理首行
 			{
@@ -568,6 +615,7 @@
 				//判断方法
 				if(!(rq_->IsMethodLegal()))
 				{
+				conn_->ReadRequestHead(rq_->rq_head);
 					code_ = NOT_FOUND;
 					goto out;
 				}
@@ -576,7 +624,8 @@
 
 				if(!rq_->IsPathLegal())
 				{
-					code_ = NOT_FOUND;
+				conn_->ReadRequestHead(rq_->rq_head);
+					code_ = Bad_Request;
 					goto out;
 				}
 				LOG(INFO,"request path is OK");
@@ -590,7 +639,7 @@
 				}
 				else
 				{
-					code_ = NOT_FOUND;
+					code_ = Bad_Request;
 					goto out;
 				}
 
@@ -604,11 +653,11 @@
 			
 
 	out:
-			/*	if(code_ != OK)
-				{
-
+				if(code_ != OK)
+			        {
+                                    HandlerError(conn_,rq_,rsp_);
 				}			
-			*/
+			
 				delete conn_;
 				delete rq_;
 				delete rsp_;
