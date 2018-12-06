@@ -1,0 +1,13 @@
+g++ -o HttpdServer HttpdServer.cc -lpthread -std=c++11
+In file included from HttpdServer.hpp:10:0,
+                 from HttpdServer.cc:1:
+ProtocolUtil.hpp: In static member function ‘static void Entry::ProcessCgi(Connect*&, Request*&, Response*&)’:
+ProtocolUtil.hpp:550:70: error: no matching function for call to ‘Connect::SendResponseText(Response*&, bool, Request*&)’
+                                 conn_->SendResponseText(rsp_,true,rq_);
+                                                                      ^
+ProtocolUtil.hpp:550:70: note: candidate is:
+ProtocolUtil.hpp:420:8: note: void Connect::SendResponseText(Response*&, bool, Request*&, int)
+   void SendResponseText(Response *&rsp_,bool cgi, Request *&rq_,int fd_)
+        ^
+ProtocolUtil.hpp:420:8: note:   candidate expects 4 arguments, 3 provided
+make: *** [HttpdServer] Error 1
