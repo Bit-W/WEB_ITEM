@@ -8,13 +8,14 @@
 #include<pthread.h>
 #include "Log.hpp"
 #include"ProtocolUtil.hpp"
+#include "ThreadPoll.hpp"
 
-//using namespace std;
 //server类
 class HttpdServer{
 	private:
 		int listen_sock;
 		int port;
+                ThreadPool *tp;
 	public:
 		HttpdServer(int port_)   //构造函数
 			   :port(port_),listen_sock(-1)
@@ -56,6 +57,8 @@ class HttpdServer{
 				LOG(ERROR,"listen socket error");
 				exit(4);
 			}
+                                tp = new ThreadPool();
+                                tp->InitThreadPool();
 			LOG(INFO,"Init socket success!");
 		}
 		/*开始发起连接
@@ -76,11 +79,14 @@ class HttpdServer{
 					LOG(WARNING,"accept socket error");
 					continue;
 				}
-				pthread_t tid_;
-				int *sockp_ = new int;
+				
+                                Task t;
+                                t.SetTask(sock_,Entry::HandlerRequest);
+                                tp->PushTask(t);
+                                cout<<"id---->"<<pthread_self()<<endl;
                                 LOG(INFO,"Get new client");
-				*sockp_ = sock_;
-				pthread_create(&tid_,NULL,Entry::HandlerRequest,(void*)sockp_);
+			
+				
 			}
 
 		}

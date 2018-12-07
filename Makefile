@@ -13,4 +13,4 @@ cgi:
 	g++ -o TestCgi TestCgi.cc
 .PHONY:clean
 clean:
-	rm -f $(bin) TestCgi
+	rm -f $(bin) TestCgi 

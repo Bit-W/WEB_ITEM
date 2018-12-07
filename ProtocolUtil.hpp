@@ -400,7 +400,7 @@ using namespace std;
 						break;
 					}
 				}
-				LOG(INFO,"read line success");
+			//	LOG(INFO,"read line success");
 				return line_.size();
 			}
 
@@ -415,7 +415,6 @@ using namespace std;
 					RecvOneLine(line_);
 					head_ += line_;           //将报头放到head中
 				}
-			    LOG(INFO,"read head success");
 			}  
 
 			//读取正文
@@ -599,11 +598,8 @@ using namespace std;
 
                          }
 			//处理请求
-			static void* HandlerRequest(void* arg_)  //处理首行
+			static int HandlerRequest(int sock_)  //处理首行
 			{
-				//一定要注意坑不能直接将指针转化为int型
-				int sock_ =  *(int*)arg_;
-				delete (int*)arg_;
 				Connect *conn_ = new Connect(sock_);
 				Request *rq_ = new Request();
 				Response *rsp_ = new Response();        
